@@ -1,0 +1,10 @@
+target/
+.env
+*.pem
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+crash.log
+.idea/
+.vscode/
