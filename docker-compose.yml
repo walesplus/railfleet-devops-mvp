@@ -1,61 +1,95 @@
 services:
+
   api:
-    image: ${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: railfleet-api:local
     restart: unless-stopped
+
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/railfleet
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+
     depends_on:
       postgres:
         condition: service_healthy
+
     ports:
       - "8080:8080"
-    networks: [railfleet]
+
+    networks:
+      - railfleet
+
 
   postgres:
     image: postgres:16-alpine
     restart: unless-stopped
+
     environment:
       POSTGRES_DB: railfleet
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d railfleet"]
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER} -d railfleet"
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks: [railfleet]
+
+    networks:
+      - railfleet
+
 
   prometheus:
     image: prom/prometheus:v3.5.0
     restart: unless-stopped
+
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+
     ports:
       - "9090:9090"
-    networks: [railfleet]
+
+    networks:
+      - railfleet
+
 
   grafana:
     image: grafana/grafana:12.1.1
     restart: unless-stopped
+
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
+
     volumes:
       - grafana_data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+
     ports:
       - "3000:3000"
+
     depends_on:
       - prometheus
-    networks: [railfleet]
+
+    networks:
+      - railfleet
+
 
 volumes:
   postgres_data:
   grafana_data:
 
+
 networks:
   railfleet:
+    driver: bridge
